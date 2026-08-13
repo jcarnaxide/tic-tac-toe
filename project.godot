@@ -11,8 +11,13 @@ config_version=5
 [application]
 
 config/name="Tic Tac Toe"
+run/main_scene="uid://b7i5m46jaww5r"
 config/features=PackedStringArray("4.7", "Mobile")
 config/icon="res://icon.svg"
+
+[autoload]
+
+GameState="*uid://kgr8dix36lb8"
 
 [display]
 

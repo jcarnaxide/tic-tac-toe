@@ -1,0 +1,98 @@
+[gd_scene format=3 uid="uid://klrs1tve4dqa"]
+
+[ext_resource type="Texture2D" uid="uid://dxqbvii7qgw1c" path="res://assets/x.png" id="1_5cwsn"]
+[ext_resource type="Script" uid="uid://dl1lqsqxxe26b" path="res://scripts/game_end_screen.gd" id="1_sdk38"]
+[ext_resource type="Texture2D" uid="uid://brx5mowhd0i6b" path="res://assets/o.png" id="2_sdk38"]
+
+[node name="GameEndScreen" type="Control" unique_id=1703005435]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+script = ExtResource("1_sdk38")
+
+[node name="PanelContainer" type="PanelContainer" parent="." unique_id=425730771]
+layout_mode = 1
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -198.0
+offset_top = -68.0
+offset_right = 198.0
+offset_bottom = 68.0
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="MarginContainer" type="MarginContainer" parent="PanelContainer" unique_id=1139102266]
+layout_mode = 2
+theme_override_constants/margin_left = 10
+theme_override_constants/margin_top = 10
+theme_override_constants/margin_right = 10
+theme_override_constants/margin_bottom = 10
+
+[node name="VBoxContainer" type="VBoxContainer" parent="PanelContainer/MarginContainer" unique_id=2085200344]
+layout_mode = 2
+theme_override_constants/separation = 25
+
+[node name="Winner" type="MarginContainer" parent="PanelContainer/MarginContainer/VBoxContainer" unique_id=1996681194]
+unique_name_in_owner = true
+visible = false
+layout_mode = 2
+theme_override_constants/margin_left = 10
+theme_override_constants/margin_top = 10
+theme_override_constants/margin_right = 10
+theme_override_constants/margin_bottom = 10
+
+[node name="HBoxContainer" type="HBoxContainer" parent="PanelContainer/MarginContainer/VBoxContainer/Winner" unique_id=822117636]
+layout_mode = 2
+theme_override_constants/separation = 25
+
+[node name="XTexture" type="TextureRect" parent="PanelContainer/MarginContainer/VBoxContainer/Winner/HBoxContainer" unique_id=1107273407]
+unique_name_in_owner = true
+visible = false
+layout_mode = 2
+texture = ExtResource("1_5cwsn")
+
+[node name="OTexture" type="TextureRect" parent="PanelContainer/MarginContainer/VBoxContainer/Winner/HBoxContainer" unique_id=653799127]
+unique_name_in_owner = true
+visible = false
+layout_mode = 2
+texture = ExtResource("2_sdk38")
+
+[node name="Label" type="Label" parent="PanelContainer/MarginContainer/VBoxContainer/Winner/HBoxContainer" unique_id=1663451390]
+layout_mode = 2
+theme_override_font_sizes/font_size = 64
+text = "WINS!"
+
+[node name="Tie" type="MarginContainer" parent="PanelContainer/MarginContainer/VBoxContainer" unique_id=244777393]
+unique_name_in_owner = true
+visible = false
+layout_mode = 2
+theme_override_constants/margin_left = 10
+theme_override_constants/margin_top = 10
+theme_override_constants/margin_right = 10
+theme_override_constants/margin_bottom = 10
+
+[node name="Label" type="Label" parent="PanelContainer/MarginContainer/VBoxContainer/Tie" unique_id=1741828688]
+layout_mode = 2
+theme_override_font_sizes/font_size = 64
+text = "Tie Game..."
+horizontal_alignment = 1
+
+[node name="MarginContainer2" type="MarginContainer" parent="PanelContainer/MarginContainer/VBoxContainer" unique_id=163554551]
+layout_mode = 2
+theme_override_constants/margin_left = 10
+theme_override_constants/margin_top = 10
+theme_override_constants/margin_right = 10
+theme_override_constants/margin_bottom = 10
+
+[node name="PlayAgainButton" type="Button" parent="PanelContainer/MarginContainer/VBoxContainer/MarginContainer2" unique_id=793172266]
+layout_mode = 2
+theme_override_font_sizes/font_size = 64
+text = "Play Again?"
+
+[connection signal="pressed" from="PanelContainer/MarginContainer/VBoxContainer/MarginContainer2/PlayAgainButton" to="." method="_on_play_again_button_pressed"]

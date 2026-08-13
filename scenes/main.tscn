@@ -1,0 +1,63 @@
+[gd_scene format=3 uid="uid://b7i5m46jaww5r"]
+
+[ext_resource type="Texture2D" uid="uid://dnd2cqq7f4fx1" path="res://assets/background.png" id="1_o5qli"]
+[ext_resource type="Script" uid="uid://c0b1ekrh1y18h" path="res://scripts/main.gd" id="1_sugp2"]
+[ext_resource type="PackedScene" uid="uid://cha6mv3tn2uwq" path="res://scenes/space.tscn" id="2_0wfyh"]
+[ext_resource type="PackedScene" uid="uid://klrs1tve4dqa" path="res://scenes/game_end_screen.tscn" id="4_jyhfs"]
+
+[node name="Main" type="Node2D" unique_id=1682010064]
+script = ExtResource("1_sugp2")
+
+[node name="Background" type="Sprite2D" parent="." unique_id=60259592]
+texture = ExtResource("1_o5qli")
+centered = false
+
+[node name="SpacesParent" type="Node2D" parent="." unique_id=1690279158]
+unique_name_in_owner = true
+
+[node name="Space" parent="SpacesParent" unique_id=934375138 instance=ExtResource("2_0wfyh")]
+position = Vector2(270, 91)
+
+[node name="Space2" parent="SpacesParent" unique_id=1304057990 instance=ExtResource("2_0wfyh")]
+position = Vector2(531, 99)
+coord_j = 1
+
+[node name="Space3" parent="SpacesParent" unique_id=1194580013 instance=ExtResource("2_0wfyh")]
+position = Vector2(800, 102)
+coord_j = 2
+
+[node name="Space4" parent="SpacesParent" unique_id=1961496679 instance=ExtResource("2_0wfyh")]
+position = Vector2(270, 315)
+coord_i = 1
+
+[node name="Space5" parent="SpacesParent" unique_id=142275397 instance=ExtResource("2_0wfyh")]
+position = Vector2(534, 318)
+coord_i = 1
+coord_j = 1
+
+[node name="Space6" parent="SpacesParent" unique_id=849564649 instance=ExtResource("2_0wfyh")]
+position = Vector2(815, 326)
+coord_i = 1
+coord_j = 2
+
+[node name="Space7" parent="SpacesParent" unique_id=2012330394 instance=ExtResource("2_0wfyh")]
+position = Vector2(268, 544)
+coord_i = 2
+
+[node name="Space8" parent="SpacesParent" unique_id=1774084776 instance=ExtResource("2_0wfyh")]
+position = Vector2(557, 547)
+coord_i = 2
+coord_j = 1
+
+[node name="Space9" parent="SpacesParent" unique_id=2034112232 instance=ExtResource("2_0wfyh")]
+position = Vector2(841, 552)
+coord_i = 2
+coord_j = 2
+
+[node name="UI" type="CanvasLayer" parent="." unique_id=638729342]
+
+[node name="GameEndScreen" parent="UI" unique_id=1703005435 instance=ExtResource("4_jyhfs")]
+unique_name_in_owner = true
+visible = false
+
+[connection signal="play_again_requested" from="UI/GameEndScreen" to="." method="_reset"]
