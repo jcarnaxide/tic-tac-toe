@@ -6,10 +6,9 @@ when_to_use: After writing or editing any GDScript or scene file; when asked to 
 
 # Godot Verify
 
-Every other Godot skill produces an *opinion*. This one produces *evidence*: the
-engine either parses the code or it doesn't, boots the scene or it doesn't.
-Reach for it whenever a claim about Godot code needs to be true rather than
-plausible.
+Every other Godot skill produces an *opinion*. This one produces *evidence* -
+the engine either parses the code or it doesn't, boots or it doesn't. Reach for
+it whenever a claim about Godot code needs to be true rather than plausible.
 
 ## Use the bundled script
 
@@ -33,41 +32,22 @@ All commands exit non-zero on failure, so they chain safely.
 
 ## Why the script instead of raw commands
 
-Three CLI behaviours are counter-intuitive, and each one fails *silently* in the
-direction of false confidence. The script exists to absorb them. Hand-rolling
-these commands means rediscovering all three the hard way.
+Four CLI behaviours fail *silently* toward false confidence. The script absorbs
+them; hand-rolling these commands means rediscovering each the hard way.
 
-**`--check-only` does nothing without `--script`.** The docs say "use with
---script" and mean it literally. Run `godot --headless --check-only --path .`
-and the engine aborts with *"Couldn't detect whether to run the editor, the
-project manager or a specific project"* and exits 1, having parsed nothing. That
-exit 1 looks exactly like "your code has errors." Validation has to loop over
-files one at a time, which is what `check` does.
+- **`--check-only` is inert without `--script`** - it aborts having parsed
+  nothing and exits 1, which reads exactly like "your code is broken." `check`
+  loops per file instead.
+- **A mismatched engine version passes silently** - 4.2 checking a 4.7 project
+  exits 0 with no warning. The script matches the binary to `config/features`.
+- **A clean exit code does not mean the game ran** - `--quit-after` returns 0
+  even when `_ready()` threw. `smoke` judges by output, not status.
+- **`--check-only` cannot resolve autoloads** - every script touching a
+  singleton reports `Identifier not found`, however sound the code. `check`
+  reports those as `ok*` rather than failures.
 
-**A mismatched engine version passes silently.** Godot 4.2 checking a 4.7
-project exits 0 with no warning at all. Since a machine can hold many engine
-versions at once, "whichever binary I found first" is a real risk. The script
-reads `config/features` from `project.godot` and matches the binary to it,
-warning loudly if it can't.
-
-**A clean exit code does not mean the game ran.** `--quit-after` runs return 0
-even when the game threw during `_ready()`. The error is on stdout with a
-backtrace, but the status code says success. `smoke` ignores the exit code and
-judges by output instead.
-
-**`--check-only` fails on every script that touches an autoload.** It never
-instantiates singletons, so a perfectly good file reports `Compile Error:
-Identifier not found: GameState`. This is not a uid-vs-path or stale-cache
-problem - `--editor` and a freshly imported cache behave identically, and there
-is no flag that fixes it. `check` reads the `[autoload]` section of
-`project.godot` and reports these as `ok*` rather than failures.
-
-That filter is safe because of *when* the engine gives up. Real mistakes are
-parse/analyser errors, which abort before the compile stage is reached, so a
-file with a genuine bug reports the bug and never reaches the autoload error.
-The autoload error appears only when nothing else is wrong. A real unknown
-identifier also reads differently - `Identifier "Foo" not declared in the
-current scope` - and is never filtered.
+`references/cli-reference.md` has the evidence, the exact failure text, and why
+filtering the autoload case does not hide real bugs.
 
 ## Typical loop
 
@@ -77,10 +57,9 @@ After changing GDScript:
 uv run --script .claude/skills/godot-verify/scripts/godot_verify.py check
 ```
 
-`check` catches more than syntax - GDScript's analyser resolves types statically,
-so it also reports `Cannot assign a value of type "String" as "int"` and
-`Function "no_such_method()" not found in base self`. Cheap and worth running on
-every edit.
+`check` catches more than syntax - the analyser resolves types statically, so it
+also reports bad assignments and unknown method calls. Cheap; run it on every
+edit.
 
 Once it parses, confirm it actually boots:
 
@@ -98,36 +77,33 @@ no main scene set, or when you only want to exercise one piece.
 ## Reading the results
 
 Report failures with the file and line the engine gave you, and quote the
-message. Both `check` and `smoke` preserve the `at:` context lines and
-backtraces for exactly this reason - "it failed" without a location just forces
-the reader to run it again themselves.
+message. Both `check` and `smoke` preserve `at:` context lines and backtraces for
+exactly this reason - "it failed" without a location just makes the reader run it
+again themselves.
 
-`ok*` means the file is clean apart from autoload references `check` structurally
-cannot resolve. Treat it as "parsed, but its autoload calls are unproven" - the
-one blind spot is a second unknown identifier later in the file, which `smoke`
-catches. Do not report `ok*` files as failures; do not claim their autoload
-usage is verified either.
+`ok*` means clean apart from autoload references `check` structurally cannot
+resolve: parsed, but its autoload calls are unproven. Don't report these as
+failures; don't claim their autoload usage is verified either. `smoke` settles it.
 
-If the script warns about a version mismatch, treat a clean result as
-**unverified** rather than passing, and say so. A wrong-version green is worse
-than no result, because it looks like confirmation.
+On a version-mismatch warning, treat a clean result as **unverified** rather than
+passing, and say so. A wrong-version green looks like confirmation, which makes
+it worse than no result.
 
 ## When something is genuinely missing
 
-Errors that mean setup, not bad code - report these plainly rather than working
-around them:
+Setup problems, not bad code - report these plainly rather than working around
+them:
 
 - **No binary found** - pass `--godot <path>`, or ask where Godot is installed.
 - **No `run/main_scene`** - `smoke` has nothing to boot. Use `--scene`, or note
   that the project needs a main scene set in Project Settings.
 - **No `export_presets.cfg`** - presets are created in the editor under
-  Project > Export. The CLI can only use presets that already exist.
-- **Export produces no file** - almost always missing export templates for that
-  engine version, installed via Editor > Manage Export Templates.
+  Project > Export; the CLI can only use ones that already exist.
+- **Export produces no file** - almost always missing export templates, added
+  via Editor > Manage Export Templates.
 
 ## Beyond these commands
 
-The engine CLI does considerably more - recording gameplay to video with
-`--write-movie`, generating docs from docstrings with `--gdscript-docs`,
-running GUT or gdUnit4 test suites headlessly. See `references/cli-reference.md`
-for the options worth knowing and the exact invocations.
+The CLI also records gameplay to video (`--write-movie`), generates docs from
+docstrings (`--gdscript-docs`), and runs GUT or gdUnit4 suites headlessly.
+`references/cli-reference.md` has the exact invocations.

@@ -6,7 +6,8 @@ tutorial](https://docs.godotengine.org/en/4.7/tutorials/editor/command_line_tuto
 **Contents:** [Ground rules](#ground-rules) · [Running](#running-a-project) ·
 [Validation](#validation) · [Export](#export) · [Video capture](#video-capture) ·
 [Test suites](#running-test-suites) · [Docs generation](#documentation-generation) ·
-[Migration](#project-migration) · [Traps](#traps-worth-remembering)
+[Migration](#project-migration) · [Traps](#traps-worth-remembering) ·
+[Autoloads](#autoloads-and---check-only)
 
 ## Ground rules
 
@@ -40,8 +41,13 @@ godot --gpu-profile                               # per-frame GPU task breakdown
 godot --headless --check-only --script scripts/board.gd --path .
 ```
 
-Exits 1 on failure, 0 when clean. Requires `--script` - see the SKILL.md note on
-why the whole-project form does not work.
+Exits 1 on failure, 0 when clean.
+
+**`--script` is mandatory.** The whole-project form does nothing: `godot
+--headless --check-only --path .` aborts with *"Couldn't detect whether to run
+the editor, the project manager or a specific project"* and exits 1 having parsed
+no files at all. That exit code is indistinguishable from a genuine failure,
+which is why validation must loop over files one at a time.
 
 Catches parse errors *and* static type errors: bad assignments, unknown methods
 on typed bases, wrong argument counts. It does not catch anything that only
@@ -133,3 +139,28 @@ for `Godot.exe` finds nothing on a normal install.
 
 **`--import` starts the editor.** It implies `--editor` and `--quit`. Harmless,
 but it is slower than the other commands and needs a longer timeout.
+
+## Autoloads and `--check-only`
+
+`--check-only` never instantiates autoload singletons, so **any** script
+referencing one fails with `Compile Error: Identifier not found: <Name>` even
+though the project boots fine. Only statically foldable members - consts and
+enums - resolve.
+
+Verified against 4.7.1 by bisecting to a minimal two-file project. The plausible
+explanations are all wrong: `uid://` versus `res://` autoload paths behave
+identically, so does a stale, absent, or freshly rebuilt `.godot` uid cache, and
+so does `--editor`. No flag fixes it.
+
+`check` therefore reads the `[autoload]` section of `project.godot` and reports
+these files as `ok*`. That filter is safe because of *when* the engine gives up:
+
+- Genuine mistakes are **parse/analyser** errors, which abort before the compile
+  stage is ever reached. A file with a real bug reports that bug and never gets
+  as far as the autoload error - so autoload noise appears *only* when nothing
+  else is wrong.
+- A real unknown identifier reads differently anyway - `Identifier "Foo" not
+  declared in the current scope` - and is never filtered.
+
+The one residual blind spot is a second, genuine unknown identifier later in a
+file whose autoload reference came first. `smoke` covers that case.
