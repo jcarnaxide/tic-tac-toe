@@ -8,9 +8,11 @@ func _ready():
 
 func _on_game_over(winner):
 	game_end_screen.set_winner(winner)
-	game_end_screen.show()
+	# appear()/dismiss() rather than show()/hide(): the screen owns its own
+	# transition, main only says when.
+	game_end_screen.appear()
 
 func _reset():
 	# Spaces clear themselves in response to board_reset.
 	GameState.reset()
-	game_end_screen.hide()
+	game_end_screen.dismiss()
