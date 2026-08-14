@@ -2,8 +2,13 @@ extends Node
 
 signal player_changed(player: PLAYER)
 signal game_over(winner)
+## Emitted for every accepted move so the board can render itself.
+signal board_changed(i: int, j: int, player: PLAYER)
+signal board_reset
 
 enum PLAYER { X = 1, O = 2 }
+
+const SIZE = 3
 
 const CONSECUTIVES = [
 	## Horizontals
@@ -25,25 +30,37 @@ var _current_player: PLAYER = PLAYER.X:
 		player_changed.emit(_current_player)
 
 var _board: Array
+var _finished := false
 
 func reset():
-	_board = [
-		[null, null, null],
-		[null, null, null],
-		[null, null, null],
-	]
+	_board = []
+	for i in SIZE:
+		var row := []
+		row.resize(SIZE)  # resize fills with null
+		_board.append(row)
+	_finished = false
 	_current_player = PLAYER.X
+	board_reset.emit()
 
 func whose_turn() -> PLAYER:
 	return _current_player
 
 func is_valid_move(i: int, j: int) -> bool:
-	return _board[i][j] == null
+	return not _finished and _board[i][j] == null
 
 func make_move(i: int, j: int):
-	_board[i][j] = _current_player
+	# Validate here rather than trusting the caller - the end screen happens to
+	# block clicks once the game is over, but that is a UI accident, not a rule.
+	if not is_valid_move(i, j):
+		return
+	var player := _current_player
+	_board[i][j] = player
+	board_changed.emit(i, j, player)
+	# `!= null` rather than truthiness: _check_winner() returns a PLAYER value,
+	# and testing truth would silently miss a win if PLAYER.X were ever 0.
 	var winner = _check_winner()
-	if winner or _is_board_full():
+	if winner != null or _is_board_full():
+		_finished = true
 		game_over.emit(winner)
 	else:
 		_next_player()
@@ -69,9 +86,9 @@ func _check_winner():
 			if is_win:
 				return player
 
-func _is_board_full():
-	for i in range(3):
-		for j in range(3):
-			if _board[i][j] == null:
+func _is_board_full() -> bool:
+	for row in _board:
+		for cell in row:
+			if cell == null:
 				return false
 	return true
