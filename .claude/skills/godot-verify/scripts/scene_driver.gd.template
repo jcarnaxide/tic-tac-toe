@@ -16,7 +16,7 @@ class_name SceneDriver extends SceneTree
 ## Steps run in the order given; the times are absolute seconds from scene load,
 ## not deltas.
 
-const DRIVER_VERSION := 1
+const DRIVER_VERSION := 2
 
 var scene_root: Node
 
@@ -110,6 +110,42 @@ func expect_between(label: String, actual: float, low: float, high: float) -> bo
 ## expectation should replace it before the scenario is kept.
 func probe(label: String, value) -> void:
 	print("DRIVE PROBE ", label, " = ", value)
+
+## Save the current frame to `path` (an absolute OS path, or res://...).
+##
+## This is the only check in the toolkit that looks at pixels. Every other
+## helper asserts on numbers, so a piece drawn 200px off its tile passes them
+## all - `capture` is what catches "the code is right and the game looks wrong".
+##
+## It only works in a WINDOWED run. --headless installs a dummy rasteriser that
+## cannot produce pixels at all, so this reports a failure rather than writing
+## nothing: a screenshot step that quietly no-ops is indistinguishable from one
+## that worked, which is the failure mode this whole harness exists to prevent.
+## Use `godot_verify.py shot`, which runs windowed for exactly this reason.
+func capture(path: String, label := "frame") -> bool:
+	var texture := root.get_texture()
+	var image: Image = texture.get_image() if texture != null else null
+	if image == null:
+		return expect("%s: rendered (a --headless run cannot, use `shot`)" % label,
+			false)
+
+	# A uniform buffer means the frame never drew, which would otherwise be
+	# saved as a perfectly valid - and perfectly useless - PNG.
+	var seen := {}
+	var step := maxi(1, image.get_width() / 32)
+	for y in range(0, image.get_height(), step):
+		for x in range(0, image.get_width(), step):
+			seen[image.get_pixel(x, y).to_rgba32()] = true
+	if seen.size() < 2:
+		return expect("%s: frame has more than one colour" % label, false)
+
+	var err := image.save_png(path)
+	if err != OK:
+		return expect("%s: saved to %s (error %d)" % [label, path, err], false)
+
+	print("DRIVE SHOT ", path)
+	return expect("%s: captured %dx%d" % [label, image.get_width(),
+		image.get_height()], true)
 
 # ---------------------------------------------------------------------------
 # Harness

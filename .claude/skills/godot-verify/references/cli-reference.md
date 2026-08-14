@@ -8,7 +8,7 @@ tutorial](https://docs.godotengine.org/en/4.7/tutorials/editor/command_line_tuto
 [Test suites](#running-test-suites) · [Docs generation](#documentation-generation) ·
 [Migration](#project-migration) · [Traps](#traps-worth-remembering) ·
 [Autoloads](#autoloads-and---check-only) · [Driving scenes](#driving-a-live-scene) ·
-[Class cache](#the-global-class-cache)
+[Class cache](#the-global-class-cache) · [Rendering a frame](#rendering-a-frame)
 
 ## Ground rules
 
@@ -218,3 +218,36 @@ Two files declaring the same `class_name` is a hard error: `Class "X" hides a
 global script class`. This bites when tooling keeps a template copy inside the
 project — store such templates under a non-`.gd` extension so the engine never
 registers them.
+
+## Rendering a frame
+
+Verified against 4.7.1 while building `shot`:
+
+**`--headless` cannot produce pixels at all.** It installs the *dummy*
+rendering server, so `get_viewport().get_texture().get_image()` returns null and
+the engine logs `Parameter "t" is null` from
+`servers/rendering/dummy/storage/texture_storage.h`. No flag overrides it —
+the rasteriser is chosen by the display driver. Every headless command therefore
+verifies a game that was never drawn.
+
+**A windowed run still exits on its own if it is bounded.** The rule against
+launching a windowed Godot from a tool call is narrower than "never": what hangs
+forever is a windowed run *with no frame budget*. With `--quit-after` it opens a
+window, renders, and terminates unattended with exit 0:
+
+```bash
+godot --path . --fixed-fps 60 --quit-after 120 --script res://tests/shot.gd
+```
+
+That is the only way to obtain a screenshot, so forbidding windowed runs
+outright costs the only pixel evidence available. It does require a display —
+on a truly headless machine there is no workaround.
+
+**`Image.save_png()` accepts both `res://` paths and absolute OS paths**, so a
+capture can be written outside the project without going through
+`ProjectSettings.globalize_path()`.
+
+**Sample a captured frame before trusting it.** A frame that never drew still
+saves as a valid PNG — uniformly one colour. Counting distinct colours across a
+coarse grid distinguishes "rendered" from "wrote a blank buffer"; without that
+check a screenshot step passes on a black image.

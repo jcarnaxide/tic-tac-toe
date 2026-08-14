@@ -1,7 +1,7 @@
 ---
 name: godot-verify
-description: Verify a Godot project actually works by running the engine headlessly - parse-check GDScript for syntax and type errors, boot the game to catch runtime errors, drive a live scene forward to test behaviour that unfolds over time, and export builds without opening the editor. Use this whenever you have written or changed a .gd or .tscn file and want to know if it really works, when the user asks to check for errors, validate, test, run, smoke-test, build, or export the project, when you need to prove an animation, tween, timer, or state machine actually behaves, or before claiming any Godot change is complete. Prefer this over reasoning about whether code looks correct - the engine is the only authority on whether it parses, boots, and behaves.
-when_to_use: After writing or editing any GDScript or scene file; when asked to check for errors, run the project, or export a build; when testing animations, tweens, timers, or anything time-dependent; before reporting Godot work as done
+description: Verify a Godot project actually works by running the engine - parse-check GDScript for syntax and type errors, boot the game to catch runtime errors, drive a live scene forward to test behaviour that unfolds over time, render a frame to a PNG to see how it actually looks, and export builds without opening the editor. Use this whenever you have written or changed a .gd, .tscn or art file and want to know if it really works, when the user asks to check for errors, validate, test, run, smoke-test, screenshot, build, or export the project, when you need to prove an animation, tween, timer, or state machine actually behaves, when you have changed sprites, textures, positions or anything else visual and need to see the result, or before claiming any Godot change is complete. Prefer this over reasoning about whether code looks correct - the engine is the only authority on whether it parses, boots, behaves, and renders.
+when_to_use: After writing or editing any GDScript, scene, or art file; when asked to check for errors, run the project, screenshot it, or export a build; when testing animations, tweens, timers, or anything time-dependent; when changing sprites, textures or positions and needing to see how it looks; before reporting Godot work as done
 ---
 
 # Godot Verify
@@ -25,6 +25,7 @@ Run it from anywhere in the project - it walks up to find `project.godot`. Add
 | `check [paths...]` | Parse-check GDScript. No paths = whole project |
 | `smoke [--frames N] [--scene res://...]` | Boot headless, report runtime errors |
 | `drive <scenario.gd> [--fps N] [--seconds N]` | Run a scenario against a live scene at a fixed timestep |
+| `shot [scenario.gd] [--out P] [--at N]` | Render a frame to a PNG. The only command that sees pixels |
 | `import` | Reimport resources (after adding assets) |
 | `presets` | List export presets |
 | `export --preset NAME --output PATH [--debug]` | Build without the editor |
@@ -33,7 +34,7 @@ All commands exit non-zero on failure, so they chain safely.
 
 ## Why the script instead of raw commands
 
-Five CLI behaviours fail *silently* toward false confidence. The script absorbs
+Six CLI behaviours fail *silently* toward false confidence. The script absorbs
 them; hand-rolling these commands means rediscovering each the hard way.
 
 - **`--check-only` is inert without `--script`** - it aborts having parsed
@@ -51,6 +52,10 @@ them; hand-rolling these commands means rediscovering each the hard way.
   pass and is gitignored. On a fresh clone, code referencing the project's own
   classes fails with `Could not find type "X"` and looks broken. `check` and
   `drive` run an import pass when the cache is absent.
+- **`--headless` cannot render at all** - it installs a dummy rasteriser, so
+  every check runs against a game that was never drawn. Nothing reports this;
+  the runs simply pass while proving nothing about the image. `shot` drops
+  `--headless` deliberately, and is the only command that does.
 
 `references/cli-reference.md` has the evidence, the exact failure text, and why
 filtering the autoload case does not hide real bugs.
@@ -142,6 +147,47 @@ Four things make a hand-rolled version quietly report success:
 
 Autoload *identifiers* are also out of scope under `--script` — `GameState` is
 `Identifier not found` even though the node exists. Always use `autoload("Name")`.
+
+## Whether it actually looks right
+
+`check`, `smoke` and `drive` all assert on *numbers* — types, node existence,
+scales, opacities. None of them sees a single pixel. A sprite positioned 200px
+off its tile, a texture that failed to import, art with the wrong colours: every
+one of those passes a full green `drive` run, because nothing in the run is
+looking at the image.
+
+```bash
+uv run --script .claude/skills/godot-verify/scripts/godot_verify.py shot --out shot.png
+```
+
+Then **read the PNG with an image-capable tool and actually look at it.** That
+is the point — the file is evidence only if someone examines it.
+
+Pass a scenario to capture a specific moment rather than the opening frame; it
+is an ordinary `drive` scenario that calls `capture(path, label)`:
+
+```gdscript
+extends SceneDriver
+
+func scenario() -> Array:
+	var game_state := autoload("GameState")
+	return [
+		[0.0, func(): game_state.make_move(1, 1)],
+		[0.4, func(): capture("res://out/mid.png", "board with one piece")],
+	]
+```
+
+**`shot` runs windowed, and it is the one command that must.** `--headless`
+installs a dummy rasteriser: `get_texture().get_image()` returns null under it
+and no flag changes that, so a screenshot is impossible in the mode every other
+command uses. A windowed run bounded by `--quit-after` still exits on its own
+without a human touching it, which is what makes it safe to call from a tool —
+a window opens briefly and closes. On a machine with no display at all, there is
+no way to render a frame; that is a real limit, not a bug to work around.
+
+`capture()` fails loudly when it cannot produce pixels, rather than skipping.
+Calling it from a headless `drive` run is therefore a failure, not a silent
+no-op — the same reasoning that makes an assertion-free scenario a failure.
 
 ## Reading the results
 

@@ -23,6 +23,9 @@ uv run --script .claude/skills/godot-verify/scripts/godot_verify.py smoke
 # Drive a live scene at a fixed timestep - the only thing that tests animation
 uv run --script .claude/skills/godot-verify/scripts/godot_verify.py drive tests/animation.gd
 
+# Render a frame to a PNG - the only thing that sees pixels
+uv run --script .claude/skills/godot-verify/scripts/godot_verify.py shot --out shot.png
+
 # Which engine binary will be used, and why
 uv run --script .claude/skills/godot-verify/scripts/godot_verify.py find
 ```
@@ -37,13 +40,21 @@ this only because `GameState.PLAYER.X` is an enum, and consts/enums fold
 statically. `ok*` is not a failure; it also is not proof. Only `smoke` exercises
 autoload usage for real.
 
-**Never launch a windowed Godot from a tool call** — it blocks until a human
-closes the window. Always `--headless --quit-after N`.
+**Never launch a Godot run without a frame budget** — it blocks until a human
+closes the window. `--quit-after N` is the part that makes a run safe, not
+`--headless`; a *windowed* run bounded by `--quit-after` exits on its own, which
+is exactly how `shot` works.
 
 **Neither `check` nor `smoke` tests anything animated.** `smoke` boots the scene
 and never clicks it, so every tween is unexercised while both commands report
 clean. `tests/animation.gd` is the scenario that actually covers the piece pop
 and the win-screen transition; run `drive` after touching either.
+
+**Nothing headless sees pixels.** `--headless` installs a dummy rasteriser, so
+`check`, `smoke` and `drive` all pass on a game that was never drawn — a sprite
+200px off its tile, a texture that failed to import, or the wrong colours all
+survive a fully green run. Use `shot` after any visual change, then *look at the
+PNG*. The file is evidence only if someone examines it.
 
 ## Architecture
 
@@ -102,6 +113,20 @@ including throughout a fade-out. `dismiss()` switches to `IGNORE` for that reaso
 `game_state.gd`, and nine hand-placed `Space` instances in `main.tscn` each
 carrying exported `coord_i`/`coord_j`. No code generates the grid. Changing board
 size means editing the scene too.
+
+**The art is generated, not drawn.** `assets/background.png`, `x.png` and `o.png`
+are composed from Kenney CC0 packs by `tools/build_art.py` — edit the script and
+re-run it rather than the PNGs. It also prints the nine `Space` positions from
+the same `CELL`/`GAP` constants that drew the board, so board geometry and piece
+placement cannot drift apart; take the positions from its output. Source packs
+download to the gitignored `.art-cache/`, and `assets/CREDITS.md` records
+provenance.
+
+**New image data is invisible until an import pass runs.** Godot reads textures
+through the `.import` files it generates, not the PNGs, so a rebuilt asset shows
+the *old* image — or nothing — until `godot_verify.py import`. Keeping asset
+filenames stable also keeps their `uid://`s, so scenes referencing them do not
+need touching.
 
 **`project.godot` references the main scene and the `GameState` autoload by
 `uid://`**, resolved through `.godot/uid_cache.bin`, which is gitignored. A fresh
