@@ -55,6 +55,20 @@ even when the game threw during `_ready()`. The error is on stdout with a
 backtrace, but the status code says success. `smoke` ignores the exit code and
 judges by output instead.
 
+**`--check-only` fails on every script that touches an autoload.** It never
+instantiates singletons, so a perfectly good file reports `Compile Error:
+Identifier not found: GameState`. This is not a uid-vs-path or stale-cache
+problem - `--editor` and a freshly imported cache behave identically, and there
+is no flag that fixes it. `check` reads the `[autoload]` section of
+`project.godot` and reports these as `ok*` rather than failures.
+
+That filter is safe because of *when* the engine gives up. Real mistakes are
+parse/analyser errors, which abort before the compile stage is reached, so a
+file with a genuine bug reports the bug and never reaches the autoload error.
+The autoload error appears only when nothing else is wrong. A real unknown
+identifier also reads differently - `Identifier "Foo" not declared in the
+current scope` - and is never filtered.
+
 ## Typical loop
 
 After changing GDScript:
@@ -87,6 +101,12 @@ Report failures with the file and line the engine gave you, and quote the
 message. Both `check` and `smoke` preserve the `at:` context lines and
 backtraces for exactly this reason - "it failed" without a location just forces
 the reader to run it again themselves.
+
+`ok*` means the file is clean apart from autoload references `check` structurally
+cannot resolve. Treat it as "parsed, but its autoload calls are unproven" - the
+one blind spot is a second unknown identifier later in the file, which `smoke`
+catches. Do not report `ok*` files as failures; do not claim their autoload
+usage is verified either.
 
 If the script warns about a version mismatch, treat a clean result as
 **unverified** rather than passing, and say so. A wrong-version green is worse

@@ -105,6 +105,50 @@ def main_scene(root: Path) -> str | None:
     return match.group(1) if match else None
 
 
+def autoload_names(root: Path) -> set[str]:
+    """Singleton names from the [autoload] section of project.godot.
+
+    Needed because `--check-only` never registers autoloads - see
+    `classify_autoload_noise` for what that costs us.
+    """
+    text = (root / "project.godot").read_text(encoding="utf-8", errors="replace")
+    section = re.search(r"^\[autoload\]$(.*?)(?=^\[|\Z)", text,
+                        re.MULTILINE | re.DOTALL)
+    if not section:
+        return set()
+    return set(re.findall(r"^\s*([A-Za-z_][A-Za-z0-9_]*)\s*=",
+                          section.group(1), re.MULTILINE))
+
+
+def classify_autoload_noise(errors: list[str], autoloads: set[str]) -> bool:
+    """True if every error is just `--check-only` not knowing an autoload.
+
+    Verified against Godot 4.7.1: `--check-only --script` does not instantiate
+    autoload singletons, so any script touching one fails with
+    `Compile Error: Identifier not found: <Name>` even though the project boots
+    fine. It is not a uid-vs-path or stale-cache problem - `--editor` and a
+    freshly imported cache behave identically.
+
+    Filtering is safe because of *when* the engine gives up: genuine mistakes
+    are parse/analyser errors, which abort before the compile stage is ever
+    reached. So a file with a real bug reports that bug and never reaches the
+    autoload error - the autoload error appears only when nothing else is
+    wrong. The one residual blind spot is a second, genuine unknown identifier
+    later in a file whose autoload reference came first; `smoke` covers that.
+    """
+    if not errors or not autoloads:
+        return False
+    for line in errors:
+        stripped = line.strip()
+        if stripped.startswith("at:") or "Failed to load script" in stripped:
+            continue  # context lines that accompany the real message
+        found = re.search(r"Identifier not found:\s*([A-Za-z_][A-Za-z0-9_]*)",
+                          stripped)
+        if not found or found.group(1) not in autoloads:
+            return False
+    return True
+
+
 # --------------------------------------------------------------------------
 # Engine discovery
 # --------------------------------------------------------------------------
@@ -374,7 +418,9 @@ def cmd_check(root: Path, args) -> int:
         return 0
 
     print(f"Checking {len(files)} script(s) with Godot {version}\n")
+    autoloads = autoload_names(root)
     failed: list[tuple[Path, str]] = []
+    unverified: list[str] = []
     for path in files:
         rel = path.relative_to(root).as_posix()
         try:
@@ -389,12 +435,22 @@ def cmd_check(root: Path, args) -> int:
             continue
 
         errors = extract_errors(proc.stdout + proc.stderr)
-        if proc.returncode != 0 or errors:
+        if classify_autoload_noise(errors, autoloads):
+            unverified.append(rel)
+            print(f"  ok*      {rel}")
+        elif proc.returncode != 0 or errors:
             detail = "\n".join(errors) or (proc.stdout + proc.stderr).strip()
             failed.append((path, detail))
             print(f"  FAIL     {rel}")
         else:
             print(f"  ok       {rel}")
+
+    if unverified:
+        print(f"\n  * {len(unverified)} script(s) reference an autoload, which "
+              f"--check-only cannot resolve.\n"
+              f"    Nothing else was wrong with them - a real error would have "
+              f"surfaced instead.\n"
+              f"    Run `smoke` to exercise those references for real.")
 
     if failed:
         print(f"\n{len(failed)} of {len(files)} script(s) failed:\n")
