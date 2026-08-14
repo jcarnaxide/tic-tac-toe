@@ -91,8 +91,7 @@ theme_override_constants/margin_right = 10
 theme_override_constants/margin_bottom = 10
 
 [node name="PlayAgainButton" type="Button" parent="PanelContainer/MarginContainer/VBoxContainer/MarginContainer2" unique_id=793172266]
+unique_name_in_owner = true
 layout_mode = 2
 theme_override_font_sizes/font_size = 64
 text = "Play Again?"
-
-[connection signal="pressed" from="PanelContainer/MarginContainer/VBoxContainer/MarginContainer2/PlayAgainButton" to="." method="_on_play_again_button_pressed"]

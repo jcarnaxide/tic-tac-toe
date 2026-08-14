@@ -24,5 +24,3 @@ texture = ExtResource("3_x2olr")
 
 [node name="CollisionShape2D" type="CollisionShape2D" parent="ClickArea" unique_id=728338936]
 shape = SubResource("CircleShape2D_5530b")
-
-[connection signal="input_event" from="ClickArea" to="." method="_on_click_area_input_event"]

@@ -7,6 +7,7 @@ class_name Space extends Node2D
 @onready var o_sprite: Sprite2D = %OSprite
 
 func _ready():
+	$ClickArea.input_event.connect(_on_click_area_input_event)
 	GameState.board_changed.connect(_on_board_changed)
 	GameState.board_reset.connect(_on_board_reset)
 

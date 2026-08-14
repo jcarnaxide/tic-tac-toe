@@ -6,6 +6,10 @@ signal play_again_requested
 @onready var x_texture = %XTexture
 @onready var o_texture = %OTexture
 @onready var tie = %Tie
+@onready var play_again_button = %PlayAgainButton
+
+func _ready():
+	play_again_button.pressed.connect(_on_play_again_button_pressed)
 
 func reset():
 	winner.hide()

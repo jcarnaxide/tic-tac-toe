@@ -59,5 +59,3 @@ coord_j = 2
 [node name="GameEndScreen" parent="UI" unique_id=1703005435 instance=ExtResource("4_jyhfs")]
 unique_name_in_owner = true
 visible = false
-
-[connection signal="play_again_requested" from="UI/GameEndScreen" to="." method="_reset"]
