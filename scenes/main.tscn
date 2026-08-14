@@ -16,41 +16,41 @@ centered = false
 unique_name_in_owner = true
 
 [node name="Space" parent="SpacesParent" unique_id=934375138 instance=ExtResource("2_0wfyh")]
-position = Vector2(270, 91)
+position = Vector2(390, 138)
 
 [node name="Space2" parent="SpacesParent" unique_id=1304057990 instance=ExtResource("2_0wfyh")]
-position = Vector2(531, 99)
+position = Vector2(576, 138)
 coord_j = 1
 
 [node name="Space3" parent="SpacesParent" unique_id=1194580013 instance=ExtResource("2_0wfyh")]
-position = Vector2(800, 102)
+position = Vector2(762, 138)
 coord_j = 2
 
 [node name="Space4" parent="SpacesParent" unique_id=1961496679 instance=ExtResource("2_0wfyh")]
-position = Vector2(270, 315)
+position = Vector2(390, 324)
 coord_i = 1
 
 [node name="Space5" parent="SpacesParent" unique_id=142275397 instance=ExtResource("2_0wfyh")]
-position = Vector2(534, 318)
+position = Vector2(576, 324)
 coord_i = 1
 coord_j = 1
 
 [node name="Space6" parent="SpacesParent" unique_id=849564649 instance=ExtResource("2_0wfyh")]
-position = Vector2(815, 326)
+position = Vector2(762, 324)
 coord_i = 1
 coord_j = 2
 
 [node name="Space7" parent="SpacesParent" unique_id=2012330394 instance=ExtResource("2_0wfyh")]
-position = Vector2(268, 544)
+position = Vector2(390, 510)
 coord_i = 2
 
 [node name="Space8" parent="SpacesParent" unique_id=1774084776 instance=ExtResource("2_0wfyh")]
-position = Vector2(557, 547)
+position = Vector2(576, 510)
 coord_i = 2
 coord_j = 1
 
 [node name="Space9" parent="SpacesParent" unique_id=2034112232 instance=ExtResource("2_0wfyh")]
-position = Vector2(841, 552)
+position = Vector2(762, 510)
 coord_i = 2
 coord_j = 2
 

@@ -4,8 +4,8 @@
 [ext_resource type="Texture2D" uid="uid://dxqbvii7qgw1c" path="res://assets/x.png" id="2_dtwn4"]
 [ext_resource type="Texture2D" uid="uid://brx5mowhd0i6b" path="res://assets/o.png" id="3_x2olr"]
 
-[sub_resource type="CircleShape2D" id="CircleShape2D_5530b"]
-radius = 82.006096
+[sub_resource type="RectangleShape2D" id="RectangleShape2D_5530b"]
+size = Vector2(168, 168)
 
 [node name="Space" type="Node2D" unique_id=934375138]
 script = ExtResource("1_rysn1")
@@ -23,4 +23,4 @@ texture = ExtResource("3_x2olr")
 [node name="ClickArea" type="Area2D" parent="." unique_id=1637658972]
 
 [node name="CollisionShape2D" type="CollisionShape2D" parent="ClickArea" unique_id=728338936]
-shape = SubResource("CircleShape2D_5530b")
+shape = SubResource("RectangleShape2D_5530b")

@@ -1,2 +1,6 @@
 # Normalize EOL for all files that Git considers text files.
 * text=auto eol=lf
+
+# Art is binary. text=auto detects this already, but a misdetected PNG is
+# corrupted silently by EOL conversion, so say it outright.
+*.png binary

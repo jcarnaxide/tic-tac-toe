@@ -4,3 +4,6 @@
 
 # Claude Code per-machine settings (permission grants, not shared config)
 .claude/settings.local.json
+
+# Downloaded Kenney source packs; tools/build_art.py refetches them on demand
+.art-cache/
