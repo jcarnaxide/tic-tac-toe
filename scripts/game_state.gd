@@ -6,7 +6,7 @@ signal game_over(winner)
 signal board_changed(i: int, j: int, player: PLAYER)
 signal board_reset
 
-enum PLAYER { X = 1, O = 2 }
+enum PLAYER { X, O }
 
 const SIZE = 3
 
@@ -56,8 +56,8 @@ func make_move(i: int, j: int):
 	var player := _current_player
 	_board[i][j] = player
 	board_changed.emit(i, j, player)
-	# `!= null` rather than truthiness: _check_winner() returns a PLAYER value,
-	# and testing truth would silently miss a win if PLAYER.X were ever 0.
+	# `!= null` rather than truthiness: PLAYER.X is 0, so a truthiness test drops
+	# every win by X. _check_winner() returns null or a PLAYER, never a bool.
 	var winner = _check_winner()
 	if winner != null or _is_board_full():
 		_finished = true
