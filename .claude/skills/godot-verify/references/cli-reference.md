@@ -7,7 +7,8 @@ tutorial](https://docs.godotengine.org/en/4.7/tutorials/editor/command_line_tuto
 [Validation](#validation) · [Export](#export) · [Video capture](#video-capture) ·
 [Test suites](#running-test-suites) · [Docs generation](#documentation-generation) ·
 [Migration](#project-migration) · [Traps](#traps-worth-remembering) ·
-[Autoloads](#autoloads-and---check-only)
+[Autoloads](#autoloads-and---check-only) · [Driving scenes](#driving-a-live-scene) ·
+[Class cache](#the-global-class-cache)
 
 ## Ground rules
 
@@ -164,3 +165,56 @@ these files as `ok*`. That filter is safe because of *when* the engine gives up:
 
 The one residual blind spot is a second, genuine unknown identifier later in a
 file whose autoload reference came first. `smoke` covers that case.
+
+## Driving a live scene
+
+`--script` runs any script that `extends SceneTree` (or `MainLoop`), which is how
+`drive` boots a scene and steps it forward. It is also the fastest way to settle
+an API question the docs leave ambiguous:
+
+```bash
+godot --headless --quit-after 600 --script res://probe.gd
+```
+
+Verified against 4.7.1 while building `drive`:
+
+**Autoload identifiers are not in scope under `--script`.** `GameState` fails to
+compile with `Identifier not found` even though `/root/GameState` exists and the
+same code works when the project boots normally. Reach the node instead:
+`root.get_node_or_null("GameState")`.
+
+**`--fixed-fps N` is mandatory for observing anything mid-flight.** Headless runs
+the loop unthrottled, and the deltas are large and uneven — a 0.15s tween
+completed inside a single frame, so a sample taken "part-way through" returned
+the final value. An assertion like `scale < 1.1` then passes on a tween that
+never ran. With `--fixed-fps 60` the same sample read `0.758`.
+
+**Never `await` inside a `--script` MainLoop.** An awaited `process_frame` or
+`SceneTree.create_timer()` that never resolves hangs the process with no output
+at all; killing it leaves an empty log indistinguishable from an instant crash.
+Drive state from `_process(delta) -> bool` instead — returning `true` quits.
+
+**`_initialize()` and `_process(delta) -> bool` both work** on a `SceneTree`
+subclass, and `add_child()` fires `_ready()` synchronously, so nodes and
+`%UniqueNames` are reachable immediately after the scene is added.
+
+**Sampling two steps in one frame reads pre-delta state.** If a scenario fires
+step *n* and step *n+1* in the same frame, nothing has advanced between them.
+Cap it at one step per frame.
+
+**`Node2D.scale = Vector2.ZERO` stores as `(1e-5, 1e-5)`** — `Transform2D` cannot
+represent an exact zero scale. Assert `< 0.01`, never `== 0`.
+
+## The global class cache
+
+`class_name` declarations resolve through
+`.godot/global_script_class_cache.cfg`, written by an import pass and normally
+gitignored. Without it, `extends SomeClass` fails with `Could not find base class
+"SomeClass"` and typed references fail with `Could not find type "X"` — in code
+that is perfectly correct. A fresh clone therefore reports a pile of parse errors
+until `godot --headless --import --path .` has run once.
+
+Two files declaring the same `class_name` is a hard error: `Class "X" hides a
+global script class`. This bites when tooling keeps a template copy inside the
+project — store such templates under a non-`.gd` extension so the engine never
+registers them.

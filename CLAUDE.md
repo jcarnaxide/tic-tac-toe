@@ -20,6 +20,9 @@ uv run --script .claude/skills/godot-verify/scripts/godot_verify.py check script
 # Boot headless and report runtime errors
 uv run --script .claude/skills/godot-verify/scripts/godot_verify.py smoke
 
+# Drive a live scene at a fixed timestep - the only thing that tests animation
+uv run --script .claude/skills/godot-verify/scripts/godot_verify.py drive tests/animation.gd
+
 # Which engine binary will be used, and why
 uv run --script .claude/skills/godot-verify/scripts/godot_verify.py find
 ```
@@ -36,6 +39,11 @@ autoload usage for real.
 
 **Never launch a windowed Godot from a tool call** — it blocks until a human
 closes the window. Always `--headless --quit-after N`.
+
+**Neither `check` nor `smoke` tests anything animated.** `smoke` boots the scene
+and never clicks it, so every tween is unexercised while both commands report
+clean. `tests/animation.gd` is the scenario that actually covers the piece pop
+and the win-screen transition; run `drive` after touching either.
 
 ## Architecture
 
@@ -55,6 +63,11 @@ Data flows one direction each way:
 - **Game over:** `GameState.game_over(winner)` → `main.gd` → `GameEndScreen.set_winner()`,
   where `winner == null` means a tie.
 
+Transitions belong to whichever node draws the thing. `Space` pops its own sprite
+in; `GameEndScreen` exposes `appear()`/`dismiss()` rather than being shown and
+hidden by `main.gd`, so `main` says *when* and the screen decides *how*.
+`GameState` knows nothing about any of it.
+
 ### Landmines
 
 **`PLAYER.X` is 0.** `_check_winner()` returns `null` or a `PLAYER`, so its result
@@ -70,6 +83,20 @@ behind a completely green `check`, whereas in code the analyser catches it.
 
 When a node is only reachable by a deep path, mark it `unique_name_in_owner` and
 reach it with `%Name` instead of spelling the path out.
+
+**Tweens need a kill-before-start.** A retriggerable tween must
+`if _tween and _tween.is_valid(): _tween.kill()` first — the docs warn against
+two tweens on one property, and `is_valid()` is the check that matters because a
+finished tween goes invalid while the reference stays live. `_on_board_reset()`
+kills too, or a pop still running writes `scale` after the board has cleared.
+
+**A `Control` scales from its top-left corner.** `pivot_offset` defaults to
+`(0, 0)`, and `size` is not settled during `_ready()` — the end screen's panel
+measures 396×309 at runtime, not the 396×136 its `.tscn` offsets suggest. Track
+it via the `resized` signal instead of reading `size` once. Relatedly,
+`mouse_filter` defaults to `MOUSE_FILTER_STOP`, so a full-rect Control keeps
+eating clicks aimed at the board underneath for as long as it is visible —
+including throughout a fade-out. `dismiss()` switches to `IGNORE` for that reason.
 
 **The 3×3 shape is hardcoded in three places** — `SIZE` and `CONSECUTIVES` in
 `game_state.gd`, and nine hand-placed `Space` instances in `main.tscn` each
