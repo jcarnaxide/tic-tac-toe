@@ -2,8 +2,8 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
-A Godot 4.7 tic-tac-toe game (Mobile renderer), plus three project-local skills
-for working on Godot codebases.
+A Godot 4.7 tic-tac-toe game (Mobile renderer). The three Godot skills it is
+verified with live in `~/.claude/skills/`, not in this repo — see [Skills](#skills).
 
 ## Verifying changes
 
@@ -12,22 +12,22 @@ engine itself, via the `godot-verify` skill's script:
 
 ```bash
 # Parse + static type check the whole project (cheap; run on every edit)
-uv run --script .claude/skills/godot-verify/scripts/godot_verify.py check
+uv run --script ~/.claude/skills/godot-verify/scripts/godot_verify.py check
 
 # One file
-uv run --script .claude/skills/godot-verify/scripts/godot_verify.py check scripts/game_state.gd
+uv run --script ~/.claude/skills/godot-verify/scripts/godot_verify.py check scripts/game_state.gd
 
 # Boot headless and report runtime errors
-uv run --script .claude/skills/godot-verify/scripts/godot_verify.py smoke
+uv run --script ~/.claude/skills/godot-verify/scripts/godot_verify.py smoke
 
 # Drive a live scene at a fixed timestep - the only thing that tests animation
-uv run --script .claude/skills/godot-verify/scripts/godot_verify.py drive tests/animation.gd
+uv run --script ~/.claude/skills/godot-verify/scripts/godot_verify.py drive tests/animation.gd
 
 # Render a frame to a PNG - the only thing that sees pixels
-uv run --script .claude/skills/godot-verify/scripts/godot_verify.py shot --out shot.png
+uv run --script ~/.claude/skills/godot-verify/scripts/godot_verify.py shot --out shot.png
 
 # Which engine binary will be used, and why
-uv run --script .claude/skills/godot-verify/scripts/godot_verify.py find
+uv run --script ~/.claude/skills/godot-verify/scripts/godot_verify.py find
 ```
 
 Run Python through `uv run --script`, never a bare `python`/`python3` — the
@@ -135,9 +135,13 @@ clone or a copied project directory has no cache, so `GameState` resolves to
 
 ## Skills
 
-Three project-local skills, split by the question being asked:
+Three user-level skills, split by the question being asked. They live in
+`~/.claude/skills/` rather than this repo, so they apply to every Godot project:
 
 - **`godot-docs`** — "how do I do X?" Version-pinned docs with a committed cache.
 - **`godot-verify`** — "does it actually work?" Runs the engine. Evidence, not opinion.
 - **`godot-review`** — "is it any good?" Prioritises correctness and architecture
   over style.
+
+They read the engine version from this project's `project.godot` and walk upward
+to find it, so nothing here needs to point at them.
